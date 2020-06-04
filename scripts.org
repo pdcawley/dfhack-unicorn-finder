@@ -1,0 +1,535 @@
+# Local Variables:
+# mode: org
+# fill-column: 100
+# eval: (visual-line-mode t)`
+# eval: (visual-fill-column-mode t)
+# org-confirm-babel-evaluate: nil
+# org-babel-noweb-wrap-start: "«"
+# org-babel-noweb-wrap-end: "»"
+# End:
+
+#+title: Finding Rare Embarks with DFHack
+
+Some desirable qualities in a Dwarf Fortress are spectacularly rare, and even rarer in combination. Th
+* Embark finder
+  :PROPERTIES:
+  :ID:       3F402F2C-2C72-4246-B306-3C708C2B121C
+  :END:
+  Sometimes, you want to find some really weird embarks, and the best way to do that, is to generate lots of worlds that have a reasonable probability of having what you want, then winnowing them using =embark-assistant=. So here goes nothing
+** Notes and references
+   :PROPERTIES:
+   :ID:       609B6B4A-D59B-4770-8118-83269A73AD87
+   :END:
+*** Character targets in Embark Screen
+    :PROPERTIES:
+    :ID:       6A2F31DC-D35F-49B5-816F-E463AF0BDBC7
+    :END:
+    | Description      | char | fg | bg | bold? | x | y |
+    |------------------+------+----+----+-------+---+---|
+    | Found Count      |   48 | 14 |  0 |       |   |   |
+    | Search candidate |   88 |  0 | 14 |       |   |   |
+    |                  |      |    |    |       |   |   |
+** The actual script
+   :PROPERTIES:
+   :ID:       DBC4D144-9717-4546-AAFF-CCEC33E42F34
+   :END:
+*** Saving the paramset
+    :PROPERTIES:
+    :ID:       E2533821-8711-4F35-81C0-699AC9E2328B
+    :END:
+
+    This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world.
+
+#+name:exportparams
+#+begin_src lua :exports none
+function exportparamset(file)
+  if not dfhack.isWorldLoaded () then
+    dfhack.color (COLOR_LIGHTRED)
+    dfhack.println ("exportmap requires a world to be loaded in DF.")
+    dfhack.color (COLOR_RESET)
+    return
+  end
+
+  --  Couldn't find the definition of the enum.
+  --
+  local pole_map = {}
+    pole_map [0] = "NONE"
+    pole_map [1] = "NORTH_OR_SOUTH"
+    pole_map [2] = "NORTH_AND_OR_SOUTH"
+    pole_map [3] = "NORTH"
+    pole_map [4] = "SOUTH"
+    pole_map [5] = "NORTH_AND_SOUTH"
+
+  local pole = df.global.world.world_data.flip_latitude
+
+  function pole_to_string (pole)
+    if pole == -1 then
+      return "NONE"
+    elseif pole == 0 then
+      return "NORTH"
+    elseif pole == 1 then
+      return "SOUTH"
+    else
+      return "NORTH_AND_SOUTH"
+    end
+  end
+
+  function boolean_to_int (b)
+    if true then
+      return 1
+    else
+      return 0
+    end
+  end
+
+  local param = df.global.world.worldgen.worldgen_parms
+
+  local world_name = dfhack.TranslateName(df.global.world.world_data.name)
+
+  file:write ("[WORLD_GEN]\n")
+  file:write ("     [TITLE:" .. world_name:gsub(' ', '_'):upper() .. "]\n")
+  file:write ("     [SEED:" .. param.seed .. "]\n")
+  file:write ("     [HISTORY_SEED:" .. param.history_seed .. "]\n")
+  file:write ("     [NAME_SEED:" .. param.name_seed .. "]\n")
+  file:write ("     [CREATURE_SEED:" .. param.creature_seed .. "]\n")
+  file:write ("     [DIM:" .. tostring (param.dim_x) .. ":" ..
+                              tostring (param.dim_y) .. "]\n")
+  file:write ("     [EMBARK_POINTS:" .. tostring (param.embark_points) .. "]\n")
+  file:write ("     [END_YEAR:" .. tostring (param.end_year) .. "]\n")
+  file:write ("     [BEAST_END_YEAR:"  .. tostring (param.beast_end_year) .. ":" ..
+                                          tostring (param.beast_end_year_percent) .. "]\n")
+  file:write ("     [REVEAL_ALL_HISTORY:" .. tostring (param.reveal_all_history) .. "]\n")
+  file:write ("     [CULL_HISTORICAL_FIGURES:" .. tostring (param.cull_historical_figures) .. "]\n")
+  file:write ("     [ELEVATION:" .. tostring (param.ranges [0] [df.worldgen_range_type.ELEVATION]) .. ":" ..
+                                    tostring (param.ranges [1] [df.worldgen_range_type.ELEVATION]) .. ":" ..
+                                    tostring (param.ranges [2] [df.worldgen_range_type.ELEVATION]) .. ":" ..
+                                    tostring (param.ranges [3] [df.worldgen_range_type.ELEVATION]) .. "]\n")
+  file:write ("     [RAINFALL:" .. tostring (param.ranges [0] [df.worldgen_range_type.RAINFALL]) .. ":" ..
+                                   tostring (param.ranges [1] [df.worldgen_range_type.RAINFALL]) .. ":" ..
+                                  tostring (param.ranges [2] [df.worldgen_range_type.RAINFALL]) .. ":" ..
+                                  tostring (param.ranges [3] [df.worldgen_range_type.RAINFALL]) .. "]\n")
+  file:write ("     [TEMPERATURE:" .. tostring (param.ranges [0] [df.worldgen_range_type.TEMPERATURE]) .. ":" ..
+                                     tostring (param.ranges [1] [df.worldgen_range_type.TEMPERATURE]) .. ":" ..
+                                     tostring (param.ranges [2] [df.worldgen_range_type.TEMPERATURE]) .. ":" ..
+                                     tostring (param.ranges [3] [df.worldgen_range_type.TEMPERATURE]) .. "]\n")
+  file:write ("     [DRAINAGE:" .. tostring (param.ranges [0] [df.worldgen_range_type.DRAINAGE]) .. ":" ..
+                                   tostring (param.ranges [1] [df.worldgen_range_type.DRAINAGE]) .. ":" ..
+                                   tostring (param.ranges [2] [df.worldgen_range_type.DRAINAGE]) .. ":" ..
+                                   tostring (param.ranges [3] [df.worldgen_range_type.DRAINAGE]) .. "]\n")
+  file:write ("     [VOLCANISM:" .. tostring (param.ranges [0] [df.worldgen_range_type.VOLCANISM]) .. ":" ..
+                                    tostring (param.ranges [1] [df.worldgen_range_type.VOLCANISM]) .. ":" ..
+                                   tostring (param.ranges [2] [df.worldgen_range_type.VOLCANISM]) .. ":" ..
+                                   tostring (param.ranges [3] [df.worldgen_range_type.VOLCANISM]) .. "]\n")
+  file:write ("     [SAVAGERY:" .. tostring (param.ranges [0] [df.worldgen_range_type.SAVAGERY]) .. ":" ..
+                                   tostring (param.ranges [1] [df.worldgen_range_type.SAVAGERY]) .. ":" ..
+                                  tostring (param.ranges [2] [df.worldgen_range_type.SAVAGERY]) .. ":" ..
+                                  tostring (param.ranges [3] [df.worldgen_range_type.SAVAGERY]) .. "]\n")
+  file:write ("     [ELEVATION_FREQUENCY:" .. tostring (param.elevation_frequency [0]) .. ":" ..
+                                              tostring (param.elevation_frequency [1]) .. ":" ..
+                                              tostring (param.elevation_frequency [2]) .. ":" ..
+                                              tostring (param.elevation_frequency [3]) .. ":" ..
+                                              tostring (param.elevation_frequency [4]) .. ":" ..
+                                              tostring (param.elevation_frequency [5]) .. "]\n")
+  file:write ("     [RAIN_FREQUENCY:" .. tostring (param.rain_frequency [0]) .. ":" ..
+                                         tostring (param.rain_frequency [1]) .. ":" ..
+                                         tostring (param.rain_frequency [2]) .. ":" ..
+                                         tostring (param.rain_frequency [3]) .. ":" ..
+                                         tostring (param.rain_frequency [4]) .. ":" ..
+                                         tostring (param.rain_frequency [5]) .. "]\n")
+  file:write ("     [DRAINAGE_FREQUENCY:" .. tostring (param.drainage_frequency [0]) .. ":" ..
+                                             tostring (param.drainage_frequency [1]) .. ":" ..
+                                             tostring (param.drainage_frequency [2]) .. ":" ..
+                                             tostring (param.drainage_frequency [3]) .. ":" ..
+                                             tostring (param.drainage_frequency [4]) .. ":" ..
+                                             tostring (param.drainage_frequency [5]) .. "]\n")
+  file:write ("     [TEMPERATURE_FREQUENCY:" .. tostring (param.temperature_frequency [0]) .. ":" ..
+                                                tostring (param.temperature_frequency [1]) .. ":" ..
+                                                tostring (param.temperature_frequency [2]) .. ":" ..
+                                                tostring (param.temperature_frequency [3]) .. ":" ..
+                                                tostring (param.temperature_frequency [4]) .. ":" ..
+                                                tostring (param.temperature_frequency [5]) .. "]\n")
+  file:write ("     [SAVAGERY_FREQUENCY:" .. tostring (param.savagery_frequency [0]) .. ":" ..
+                                             tostring (param.savagery_frequency [1]) .. ":" ..
+                                             tostring (param.savagery_frequency [2]) .. ":" ..
+                                             tostring (param.savagery_frequency [3]) .. ":" ..
+                                             tostring (param.savagery_frequency [4]) .. ":" ..
+                                             tostring (param.savagery_frequency [5]) .. "]\n")
+  file:write ("     [VOLCANISM_FREQUENCY:" .. tostring (param.volcanism_frequency [0]) .. ":" ..
+                                              tostring (param.volcanism_frequency [1]) .. ":" ..
+                                              tostring (param.volcanism_frequency [2]) .. ":" ..
+                                              tostring (param.volcanism_frequency [3]) .. ":" ..
+                                              tostring (param.volcanism_frequency [4]) .. ":" ..
+                                              tostring (param.volcanism_frequency [5]) .. "]\n")
+  file:write ("     [POLE:" .. pole_to_string (pole) .."]\n")
+  file:write ("     [MINERAL_SCARCITY:" .. tostring (param.mineral_scarcity) .. "]\n")
+  file:write ("     [MEGABEAST_CAP:" .. tostring (param.megabeast_cap) .. "]\n")
+  file:write ("     [SEMIMEGABEAST_CAP:" .. tostring (param.semimegabeast_cap) .. "]\n")
+  file:write ("     [TITAN_NUMBER:" .. tostring (param.titan_number) .. "]\n")
+  file:write ("     [TITAN_ATTACK_TRIGGER:" .. tostring (param.titan_attack_trigger [0]) .. ":" ..
+                                               tostring (param.titan_attack_trigger [1]) .. ":" ..
+                                               tostring (param.titan_attack_trigger [2]).. "]\n")
+  file:write ("     [DEMON_NUMBER:" .. tostring (param.demon_number) .. "]\n")
+  file:write ("     [NIGHT_TROLL_NUMBER:" .. tostring (param.night_troll_number) .. "]\n")
+  file:write ("     [BOGEYMAN_NUMBER:" .. tostring (param.bogeyman_number) .. "]\n")
+  if dfhack.pcall (function () local dummy = param.nightmare_number end) then
+    file:write ("     [NIGHTMARE_NUMBER:" .. tostring (param.nightmare_number) .. "]\n")
+  end
+  file:write ("     [VAMPIRE_NUMBER:" .. tostring (param.vampire_number) .. "]\n")
+  file:write ("     [WEREBEAST_NUMBER:" .. tostring (param.werebeast_number) .. "]\n")
+  if dfhack.pcall (function () local dummy = param.werebeast_attack_trigger [0] end) then
+    file:write ("     [WEREBEAST_ATTACK_TRIGGER:" .. tostring (param.werebeast_attack_trigger [0]) .. ":" ..
+                                                     tostring (param.werebeast_attack_trigger [1]) .. ":" ..
+                                                     tostring (param.werebeast_attack_trigger [2]).. "]\n")
+  end
+  file:write ("     [SECRET_NUMBER:" .. tostring (param.secret_number) .. "]\n")
+  file:write ("     [REGIONAL_INTERACTION_NUMBER:".. tostring (param.regional_interaction_number).. "]\n")
+  file:write ("     [DISTURBANCE_INTERACTION_NUMBER:" .. tostring(param.disturbance_interaction_number) .. "]\n")
+  file:write ("     [EVIL_CLOUD_NUMBER:" .. tostring (param.evil_cloud_number) .. "]\n")
+  file:write ("     [EVIL_RAIN_NUMBER:" .. tostring (param.evil_rain_number) .. "]\n")
+  local generate_divine_materials
+  if not dfhack.pcall (function () generate_divine_materials = param.generate_divine_materials end) then  --  Expected new name
+    generate_divine_materials = param.anon_1   --  Will probably be renamed soon.
+  end
+  file:write ("     [GENERATE_DIVINE_MATERIALS:" .. tostring (generate_divine_materials) .. "]\n")
+  if dfhack.pcall (function () local dummy = param.allow_divination end) then
+    file:write ("     [ALLOW_DIVINATION:" .. tostring (param.allow_divination) .. "]\n")
+    file:write ("     [ALLOW_DEMONIC_EXPERIMENTS:" .. tostring (param.allow_demonic_experiments) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_EXPERIMENTS:" .. tostring (param.allow_necromancer_experiments) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_LIEUTENANTS:" .. tostring (param.allow_necromancer_lieutenants) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_GHOULS:" .. tostring (param.allow_necromancer_ghouls) .. "]\n")
+    file:write ("     [ALLOW_NECROMANCER_SUMMONS:" .. tostring (param.allow_necromancer_summons) .. "]\n")
+  end
+  file:write ("     [GOOD_SQ_COUNTS:" .. tostring (param.good_sq_counts_0) .. ":" ..
+                                         tostring (param.good_sq_counts_1) .. ":" ..
+                                         tostring (param.good_sq_counts_2) .. "]\n")
+  file:write ("     [EVIL_SQ_COUNTS:" .. tostring (param.evil_sq_counts_0) .. ":" ..
+                                         tostring (param.evil_sq_counts_1) .. ":" ..
+                                         tostring (param.evil_sq_counts_2) .. "]\n")
+  file:write ("     [PEAK_NUMBER_MIN:" .. tostring (param.peak_number_min) .. "]\n")
+  file:write ("     [PARTIAL_OCEAN_EDGE_MIN:" .. tostring (param.partial_ocean_edge_min) .. "]\n")
+  file:write ("     [COMPLETE_OCEAN_EDGE_MIN:" .. tostring (param.complete_ocean_edge_min) .. "]\n")
+  file:write ("     [VOLCANO_MIN:" .. tostring (param.volcano_min) .. "]\n")
+  file:write ("     [REGION_COUNTS:SWAMP:" .. tostring (param.region_counts [0] [df.worldgen_region_type.SWAMP]) .. ":" ..
+                                              tostring (param.region_counts [1] [df.worldgen_region_type.SWAMP]) .. ":" ..
+                                              tostring (param.region_counts [2] [df.worldgen_region_type.SWAMP]) .. "]\n")
+  file:write ("     [REGION_COUNTS:DESERT:" .. tostring (param.region_counts [0] [df.worldgen_region_type.DESERT]) .. ":" ..
+                                               tostring (param.region_counts [1] [df.worldgen_region_type.DESERT]) .. ":" ..
+                                               tostring (param.region_counts [2] [df.worldgen_region_type.DESERT]) .. "]\n")
+  file:write ("     [REGION_COUNTS:FOREST:" .. tostring (param.region_counts [0] [df.worldgen_region_type.FOREST]) .. ":" ..
+                                               tostring (param.region_counts [1] [df.worldgen_region_type.FOREST]) .. ":" ..
+                                               tostring (param.region_counts [2] [df.worldgen_region_type.FOREST]) .. "]\n")
+  file:write ("     [REGION_COUNTS:MOUNTAINS:" .. tostring (param.region_counts [0] [df.worldgen_region_type.MOUNTAINS]) .. ":" ..
+                                                  tostring (param.region_counts [1] [df.worldgen_region_type.MOUNTAINS]) .. ":" ..
+                                                  tostring (param.region_counts [2] [df.worldgen_region_type.MOUNTAINS]) .. "]\n")
+  file:write ("     [REGION_COUNTS:OCEAN:" .. tostring (param.region_counts [0] [df.worldgen_region_type.OCEAN]) .. ":" ..
+                                              tostring (param.region_counts [1] [df.worldgen_region_type.OCEAN]) .. ":" ..
+                                              tostring (param.region_counts [2] [df.worldgen_region_type.OCEAN]) .. "]\n")
+  file:write ("     [REGION_COUNTS:GLACIER:" .. tostring (param.region_counts [0] [df.worldgen_region_type.GLACIER]) .. ":" ..
+                                                tostring (param.region_counts [1] [df.worldgen_region_type.GLACIER]) .. ":" ..
+                                                tostring (param.region_counts [2] [df.worldgen_region_type.GLACIER]) .. "]\n")
+  file:write ("     [REGION_COUNTS:TUNDRA:" .. tostring (param.region_counts [0] [df.worldgen_region_type.TUNDRA]) .. ":" ..
+                                               tostring (param.region_counts [1] [df.worldgen_region_type.TUNDRA]) .. ":" ..
+                                               tostring (param.region_counts [2] [df.worldgen_region_type.TUNDRA]) .. "]\n")
+  file:write ("     [REGION_COUNTS:GRASSLAND:" .. tostring (param.region_counts [0] [df.worldgen_region_type.GRASSLAND]) .. ":" ..
+                                                  tostring (param.region_counts [1] [df.worldgen_region_type.GRASSLAND]) .. ":" ..
+                                                  tostring (param.region_counts [2] [df.worldgen_region_type.GRASSLAND]) .. "]\n")
+  file:write ("     [REGION_COUNTS:HILLS:" .. tostring (param.region_counts [0] [df.worldgen_region_type.HILLS]) .. ":" ..
+                                              tostring (param.region_counts [1] [df.worldgen_region_type.HILLS]) .. ":" ..
+                                              tostring (param.region_counts [2] [df.worldgen_region_type.HILLS]) .. "]\n")
+  file:write ("     [EROSION_CYCLE_COUNT:" .. tostring (param.erosion_cycle_count) .. "]\n")
+  file:write ("     [RIVER_MINS:" .. tostring (param.river_mins [0]) ..":" ..
+                                     tostring (param.river_mins [1]) .. "]\n")
+  file:write ("     [PERIODICALLY_ERODE_EXTREMES:" .. tostring (param.periodically_erode_extremes) .. "]\n")
+  file:write ("     [OROGRAPHIC_PRECIPITATION:" .. tostring (param.orographic_precipitation) .. "]\n")
+  file:write ("     [SUBREGION_MAX:" .. tostring (param.subregion_max) .. "]\n")
+  file:write ("     [CAVERN_LAYER_COUNT:" .. tostring (param.cavern_layer_count) .. "]\n")
+  file:write ("     [CAVERN_LAYER_OPENNESS_MIN:" .. tostring (param.cavern_layer_openness_min) .. "]\n")
+  file:write ("     [CAVERN_LAYER_OPENNESS_MAX:" .. tostring (param.cavern_layer_openness_max) .. "]\n")
+  file:write ("     [CAVERN_LAYER_PASSAGE_DENSITY_MIN:" .. tostring (param.cavern_layer_passage_density_min) .. "]\n")
+  file:write ("     [CAVERN_LAYER_PASSAGE_DENSITY_MAX:" .. tostring (param.cavern_layer_passage_density_max) .. "]\n")
+  file:write ("     [CAVERN_LAYER_WATER_MIN:" .. tostring (param.cavern_layer_water_min) .. "]\n")
+  file:write ("     [CAVERN_LAYER_WATER_MAX:" .. tostring (param.cavern_layer_water_max) .. "]\n")
+  file:write ("     [HAVE_BOTTOM_LAYER_1:" .. tostring (boolean_to_int (param.have_bottom_layer_1)) .. "]\n")
+  file:write ("     [HAVE_BOTTOM_LAYER_2:" .. tostring (boolean_to_int (param.have_bottom_layer_2)) .. "]\n")
+  file:write ("     [LEVELS_ABOVE_GROUND:" .. tostring (param.levels_above_ground) .. "]\n")
+  file:write ("     [LEVELS_ABOVE_LAYER_1:" .. tostring (param.levels_above_layer_1) .. "]\n")
+  file:write ("     [LEVELS_ABOVE_LAYER_2:" .. tostring (param.levels_above_layer_2) .. "]\n")
+  file:write ("     [LEVELS_ABOVE_LAYER_3:" .. tostring (param.levels_above_layer_3) .. "]\n")
+  file:write ("     [LEVELS_ABOVE_LAYER_4:" .. tostring (param.levels_above_layer_4) .. "]\n")
+  file:write ("     [LEVELS_ABOVE_LAYER_5:" .. tostring (param.levels_above_layer_5) .. "]\n")
+  file:write ("     [LEVELS_AT_BOTTOM:" .. tostring (param.levels_at_bottom) .. "]\n")
+  file:write ("     [CAVE_MIN_SIZE:" .. tostring (param.cave_min_size) .. "]\n")
+  file:write ("     [CAVE_MAX_SIZE:" .. tostring (param.cave_max_size) .. "]\n")
+  file:write ("     [MOUNTAIN_CAVE_MIN:" .. tostring (param.mountain_cave_min) .. "]\n")
+  file:write ("     [NON_MOUNTAIN_CAVE_MIN:" .. tostring (param.non_mountain_cave_min) .. "]\n")
+  file:write ("     [ALL_CAVES_VISIBLE:" .. tostring (param.all_caves_visible) .. "]\n")
+  file:write ("     [SHOW_EMBARK_TUNNEL:" .. tostring (param.show_embark_tunnel) .. "]\n")
+  file:write ("     [TOTAL_CIV_NUMBER:" .. tostring (param.total_civ_number) .. "]\n")
+  file:write ("     [TOTAL_CIV_POPULATION:" .. tostring (param.total_civ_population) .. "]\n")
+  file:write ("     [SITE_CAP:" .. tostring (param.site_cap) .. "]\n")
+  file:write ("     [PLAYABLE_CIVILIZATION_REQUIRED:" .. tostring (param.playable_civilization_required) .. "]\n")
+  file:write ("     [ELEVATION_RANGES:" .. tostring (param.elevation_ranges_0) .. ":" ..
+                                           tostring (param.elevation_ranges_1) .. ":" ..
+                                           tostring (param.elevation_ranges_2) .. "]\n")
+  file:write ("     [RAIN_RANGES:" .. tostring (param.rain_ranges_0) .. ":" ..
+                                      tostring (param.rain_ranges_1) .. ":" ..
+                                      tostring (param.rain_ranges_2) .. "]\n")
+  file:write ("     [DRAINAGE_RANGES:" .. tostring (param.drainage_ranges_0) .. ":" ..
+                                          tostring (param.drainage_ranges_1) .. ":" ..
+                                          tostring (param.drainage_ranges_2) .. "]\n")
+  file:write ("     [SAVAGERY_RANGES:" .. tostring (param.savagery_ranges_0) .. ":" ..
+                                          tostring (param.savagery_ranges_1) .. ":" ..
+                                          tostring (param.savagery_ranges_2) .. "]\n")
+  file:write ("     [VOLCANISM_RANGES:" .. tostring (param.volcanism_ranges_0) .. ":" ..
+                                           tostring (param.volcanism_ranges_1) .. ":" ..
+                                           tostring (param.volcanism_ranges_2) .. "]\n\n")
+
+  file:flush()
+  file:close()
+end
+#+end_src
+
+#+name: 27A57D34-29C9-44B7-9BCF-BA8489A706DF
+#+begin_src lua :tangle ./exportparams.lua :noweb yes
+      --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
+--[====[
+
+exportparam
+==========
+]====]
+
+      «exportparams»
+
+      exportparamset()
+
+#+end_src
+
+***  World Generation
+    :PROPERTIES:
+    :ID:       6B640E57-FD18-4DC5-9195-14284AE72BCC
+    :END:
+
+
+**** Support code
+
+***** Cancel the embark
+      When we cancel the embark, we do it after we've checked  the map for unicorns, so we can move it into the 'checked' subfolder. The basic code comes from =dfremote=.
+
+      #+begin_src lua :noweb-ref embark-cancel :exports none
+l-- Borrowed from dfremote
+function embark_cancel()
+   local ws = dfhack.gui.getCurViewscreen()
+   if ws._type ~= df.viewscreen_choose_start_sitest then
+      return
+   end
+
+   -- Gather path info while we have the data loaded
+   local save_dir = dfhack.getDFPath() .. '/data/save/'
+   local checked_dir = save_dir .. 'checked/'
+   local region_name = df.global.world.cur_savegame
+   local optsws = df.viewscreen_optionst:new()
+
+   optsws.options:insert(0,5) -- abort game
+   optsws.parent = ws
+   ws.child = optsws
+
+   gui.simulateInput(optsws, 'SELECT')
+
+   if not os.rename(save_dir .. region_name, checked_dir .. region_name) then
+      showError('Rename failed')
+   end
+end
+
+      #+end_src
+
+**** Generation and search script
+
+  #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
+  #+begin_src lua :tangle ./find-unicorns.lua :noweb yes
+   -- Generate worlds and search for ones matching the embark assistant profile
+   --@module = true
+   --[====[
+
+find-unicorns
+=============
+Generate worlds and search for embarks in them until we find at least one
+embark that matches our embark-assistant profile.
+
+   ]====]
+
+   local PRESETNAME  = 'PDC1'
+local gui = require 'gui'
+local utils = require 'utils'
+local WORLD_GEN_MENU_ID=3
+local worldgen_confirmed  = false
+
+local SEARCHRESULTS_PATH = dfhack.getDFPath() .. "/data/init/embark_assistant_fileresult.txt"
+local UNICORNPRESETS_PATH = dfhack.getDFPath() .. '/data/init/unicorn_presets.txt'
+
+«exportparams»
+
+function istrue(v)
+   return v ~= nil and v ~= false and v ~= 0
+end
+
+function K(k)
+   return df.interface_key[k]
+end
+
+function current_screen()
+   dfhack.gui.getCurViewscreen();
+end
+
+function send_key(k)
+   gui.simulateInput(dfhack.gui.getCurViewscreen(), k)
+end
+
+«embark-cancel»
+
+function start_advanced_worldgen()
+   local ws = dfhack.gui.getCurViewscreen()
+   -- Check we're on the title screen or its subscreens
+   while ws and ws.parent and ws._type ~= df.viewscreen_titlest do
+      ws = ws.parent
+   end
+   if ws._type ~= df.viewscreen_titlest then
+      print 'wrong screen'
+      return
+   end
+
+   -- Return to title screen
+   ws = dfhack.gui.getCurViewscreen()
+   while ws and ws.parent and ws._type ~= df.viewscreen_titlest do
+      local parent = ws.parent
+      parent.child = nil
+      ws:delete()
+      ws = parent
+   end
+
+   local titlews = ws --as:df.viewscreen_titlest
+
+   titlews.sel_subpage = df.viewscreen_titlest.T_sel_subpage.None
+   -- Skip any 'start/continue playing' lines, and choose advanced worldgen
+   titlews.sel_menu_line =
+      (#titlews.arena_savegames-#titlews.start_savegames > 1 and 1 or 0) +
+      (#titlews.start_savegames > 0 and 1 or 0) +
+      1
+   gui.simulateInput(titlews, 'SELECT')
+
+   -- Now wait for raws to load and stuff and continue with the process
+   dfhack.timeout(2, 'frames', progress_worldgen)
+end
+
+function progress_worldgen()
+   local ws = dfhack.gui.getCurViewscreen() --as:df.viewscreen_new_regionst
+
+   if ws._type ~= df.viewscreen_new_regionst then
+      print('check', ws._type)
+      return
+   end
+
+   -- If finished loading raws
+   if ws.in_worldgen and ws.unk_b8 == 19 then
+      -- Close 'Welcome to ...' message
+      if #ws.welcome_msg > 0 then
+         gui.simulateInput(ws, 'LEAVESCREEN')
+      end
+      for i,p in pairs(ws.worldgen_presets) do
+         if p.anon_1 == PRESETNAME then
+            ws.cursor_paramset = i
+         end
+      end
+      gui.simulateInput(ws, 'SELECT')
+      dfhack.timeout(20, 'frames', check_worldgen_done)
+      return
+   end
+   dfhack.timeout(20, 'frames', progress_worldgen)
+end
+
+function check_worldgen_done()
+   if df.global.world.worldgen_status.state == 10 then
+      -- worldgen is done!
+      local ws = dfhack.gui.getCurViewscreen()  --as:df.viewscreen_new_regionst
+      gui.simulateInput(ws, 'SELECT')
+
+      dfhack.timeout(20, 'frames', wait_for_home_screen)
+      return
+   end
+   dfhack.timeout(20, 'frames', check_worldgen_done)
+end
+
+function wait_for_home_screen()
+   local ws = dfhack.gui.getCurViewscreen()
+   if ws._type ~= df.viewscreen_titlest then
+      dfhack.timeout(2, 'frames', wait_for_home_screen)
+      return
+   end
+   dfhack.timeout(2,'frames', start_search)
+end
+
+function find_unicorn()
+   start_advanced_worldgen()
+end
+
+-- we assume we're back at the start screen here
+function start_search()
+   ws = dfhack.gui.getCurViewscreen()
+   ws.sel_subpage = df.viewscreen_titlest.T_sel_subpage.None
+
+   ws.sel_menu_line = (#ws.arena_savegames - #ws.start_savegames > 1 and 1 or 0)
+   send_key('SELECT')
+   ws = dfhack.gui.getCurViewscreen()
+   if ws.sel_subpage == 1 then
+      -- There's more than one world available. Choose the last one
+      ws.sel_submenu_line = #ws.start_savegames - 1
+      send_key('SELECT')
+   end
+   send_key('SELECT')
+   dfhack.timeout(2,'frames',progress_embark)
+end
+
+function progress_embark()
+   local ws = dfhack.gui.getCurViewscreen()
+
+   if ws._type ~= df.viewscreen_choose_start_sitest then
+      dfhack.timeout(10,'frames',progress_embark)
+      return
+   end
+   do_search()
+end
+
+function do_search()
+   -- remove any previous file results
+   os.execute("rm " .. SEARCHRESULTS_PATH)
+   dfhack.run_command('embark-assistant', 'fileresult')
+   dfhack.timeout(10,'frames', await_search_results)
+end
+
+function await_search_results()
+   local r,err = io.open(SEARCHRESULTS_PATH, 'r')
+   if not err then
+      local count = r:read('*number')
+      send_key('CUSTOM_Q')
+      search_got_result(count)
+      return
+   end
+   dfhack.timeout(5, 'frames',  await_search_results)
+end
+
+function search_got_result(count)
+   if count > 0 then
+      exportparamset(assert(io.open(UNICORNPRESETS_PATH, 'a')))
+      return
+   end
+   embark_cancel()
+   dfhack.timeout(1,'frames', find_unicorn)
+   return
+end
+
+if not moduleMode then
+  start_search()
+
+-- find_unicorn()
+end
+  #+end_src
+
