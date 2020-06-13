@@ -311,12 +311,19 @@ exportparam
 
 
 **** Support code
+     :PROPERTIES:
+     :ID:       C4C65CDF-84AA-42BB-9224-C6C1E36C5769
+     :END:
 
 ***** Cancel the embark
+      :PROPERTIES:
+      :ID:       4EA00158-62FC-43CB-A543-62DEA1D0C9DC
+      :END:
       When we cancel the embark, we do it after we've checked  the map for unicorns, so we can move it into the 'checked' subfolder. The basic code comes from =dfremote=.
 
+      #+name: 99AABECE-47C8-44E3-9948-C58337929E2C
       #+begin_src lua :noweb-ref embark-cancel :exports none
-l-- Borrowed from dfremote
+-- Borrowed from dfremote
 function embark_cancel()
    local ws = dfhack.gui.getCurViewscreen()
    if ws._type ~= df.viewscreen_choose_start_sitest then
@@ -324,9 +331,6 @@ function embark_cancel()
    end
 
    -- Gather path info while we have the data loaded
-   local save_dir = dfhack.getDFPath() .. '/data/save/'
-   local checked_dir = save_dir .. 'checked/'
-   local region_name = df.global.world.cur_savegame
    local optsws = df.viewscreen_optionst:new()
 
    optsws.options:insert(0,5) -- abort game
@@ -334,30 +338,29 @@ function embark_cancel()
    ws.child = optsws
 
    gui.simulateInput(optsws, 'SELECT')
-
-   if not os.rename(save_dir .. region_name, checked_dir .. region_name) then
-      showError('Rename failed')
-   end
 end
 
       #+end_src
 
 **** Generation and search script
+     :PROPERTIES:
+     :ID:       B66ACCBE-004A-4875-940C-383056272D18
+     :END:
 
   #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
   #+begin_src lua :tangle ./find-unicorns.lua :noweb yes
-   -- Generate worlds and search for ones matching the embark assistant profile
-   --@module = true
-   --[====[
+-- Generate worlds and search for ones matching the embark assistant profile
+--@module = true
+--[====[
 
-find-unicorns
-=============
-Generate worlds and search for embarks in them until we find at least one
-embark that matches our embark-assistant profile.
+   find-unicorns
+   =============
+   Generate worlds and search for embarks in them until we find at least one
+   embark that matches our embark-assistant profile.
 
-   ]====]
+]====]
 
-   local PRESETNAME  = 'PDC1'
+local PRESETNAME  = 'PDC1'
 local gui = require 'gui'
 local utils = require 'utils'
 local WORLD_GEN_MENU_ID=3
@@ -365,6 +368,12 @@ local worldgen_confirmed  = false
 
 local SEARCHRESULTS_PATH = dfhack.getDFPath() .. "/data/init/embark_assistant_fileresult.txt"
 local UNICORNPRESETS_PATH = dfhack.getDFPath() .. '/data/init/unicorn_presets.txt'
+
+local target_region = false
+local target_worldname_str = ''
+local worldsFound = 0
+
+local onSearchComplete = dfhack.event.new()
 
 «exportparams»
 
@@ -374,10 +383,6 @@ end
 
 function K(k)
    return df.interface_key[k]
-end
-
-function current_screen()
-   dfhack.gui.getCurViewscreen();
 end
 
 function send_key(k)
@@ -439,6 +444,7 @@ function progress_worldgen()
             ws.cursor_paramset = i
          end
       end
+
       gui.simulateInput(ws, 'SELECT')
       dfhack.timeout(20, 'frames', check_worldgen_done)
       return
@@ -449,6 +455,7 @@ end
 function check_worldgen_done()
    if df.global.world.worldgen_status.state == 10 then
       -- worldgen is done!
+      target_worldname_str = dfhack.TranslateName(df.global.world.world_data.name)
       local ws = dfhack.gui.getCurViewscreen()  --as:df.viewscreen_new_regionst
       gui.simulateInput(ws, 'SELECT')
 
@@ -467,8 +474,47 @@ function wait_for_home_screen()
    dfhack.timeout(2,'frames', start_search)
 end
 
-function find_unicorn()
+function find_unicorns(desired)
+   onSearchComplete.singleSearch = function (count)
+      if (count > 0) and (worldsFound >= desired) then
+         onSearchComplete.singleSearch = nil
+         return
+      else
+         dfhack.timeout(1,'frames', start_advanced_worldgen)
+      end
+   end
    start_advanced_worldgen()
+end
+
+function search_all(remaining)
+   local ws = dfhack.gui.getCurViewscreen()
+   local nextSave = 0
+   onSearchComplete.searchAll = function(count)
+      if count and count < 0 then
+         print('Finishing searchAll')
+         onSearchComplete.searchAll = nil
+         return
+      end
+      print('Checking we are on the right screen')
+      ws = dfhack.gui.getCurViewscreen()
+      if ws._type ~= df.viewscreen_titlest then
+         print('... nope!')
+         dfhack.timeout(2,'frames', onSearchComplete.searchAll)
+         return
+      else
+         print('... yup!')
+         print('getting ready to check save number ' .. nextSave .. ' of ' .. #ws.start_savegames)
+
+         if nextSave < #ws.start_savegames then
+            target_worldname_str = ws.start_savegames[nextSave].world_name_str
+            print('About to search for ' .. target_worldname_str)
+            nextSave = nextSave + 1
+            start_search()
+         end
+         return
+      end
+   end
+   onSearchComplete.searchAll(0)
 end
 
 -- we assume we're back at the start screen here
@@ -476,12 +522,23 @@ function start_search()
    ws = dfhack.gui.getCurViewscreen()
    ws.sel_subpage = df.viewscreen_titlest.T_sel_subpage.None
 
+   if #ws.start_savegames == 0 then
+      print 'Nothing left to search'
+      onSearchComplete(-1)
+      return
+   end
+
    ws.sel_menu_line = (#ws.arena_savegames - #ws.start_savegames > 1 and 1 or 0)
    send_key('SELECT')
    ws = dfhack.gui.getCurViewscreen()
    if ws.sel_subpage == 1 then
-      -- There's more than one world available. Choose the last one
-      ws.sel_submenu_line = #ws.start_savegames - 1
+      -- There's more than one world available. Choose the one we're interested in
+      print('Getting ready to search for ' .. target_worldname_str)
+      for i,sg in pairs(ws.start_savegames) do
+         if sg.world_name_str == target_worldname_str then
+            ws.sel_submenu_line = i
+         end
+      end
       send_key('SELECT')
    end
    send_key('SELECT')
@@ -490,7 +547,6 @@ end
 
 function progress_embark()
    local ws = dfhack.gui.getCurViewscreen()
-
    if ws._type ~= df.viewscreen_choose_start_sitest then
       dfhack.timeout(10,'frames',progress_embark)
       return
@@ -500,7 +556,7 @@ end
 
 function do_search()
    -- remove any previous file results
-   os.execute("rm " .. SEARCHRESULTS_PATH)
+   os.remove( SEARCHRESULTS_PATH)
    dfhack.run_command('embark-assistant', 'fileresult')
    dfhack.timeout(10,'frames', await_search_results)
 end
@@ -518,18 +574,75 @@ end
 
 function search_got_result(count)
    if count > 0 then
+      worldsFound = worldsFound + 1
       exportparamset(assert(io.open(UNICORNPRESETS_PATH, 'a')))
-      return
    end
    embark_cancel()
-   dfhack.timeout(1,'frames', find_unicorn)
+   onSearchComplete(count)
    return
 end
 
-if not moduleMode then
-  start_search()
+function show_help()
+   print "find-unicorns search -- Searches all the existing saves for something"
+   print "                        matching your embark_assistant_profile.txt"
+   print "find-unicorns build [-preset PRESETNAME] [-count 5]"
+   print "    -- Starts building a world using PRESETNAME, then searches it for"
+   print "       'unicorns' based on your embark_assistant_profile.txt"
+   print ""
+   print "The full paramset for any 'hit' is appended to data/init/unicorn_presets.txt."
+   print "To use the worlds you found, append this file to your data/init/world_gen.txt"
+   print ""
+   print "If your desired embark is particularly rare, expect to generate a LOT of"
+   print "worlds. If you've got a couple of desired types, don't throw them away"
+   print "immediately, just update the search profile and run 'find-unicorns search'"
+end
 
--- find_unicorn()
+
+if not moduleMode then
+   «parse-args»
 end
   #+end_src
 
+*** Parsing params
+    :PROPERTIES:
+    :ID:       B17D934C-C09E-4755-8091-93CE85CCE515
+    :END:
+    #+name parse-args
+    #+name: 2BDB6353-C488-400A-AD07-5F66E608C172
+    #+begin_src lua :noweb-ref parse-args :exports none
+      utils = require('utils')
+      local valid_args = {
+         help = {},
+         search = {},
+         build = utils.invert{'preset', 'count'},
+      }
+      local args = {...}
+
+      function unpack (t, i)
+         i = i or 1
+         if t[i] ~= nil then
+            return t[i], unpack(t, i + 1)
+         end
+      end
+
+      function dispatch_command(raw_args)
+         local cmd = table.remove(raw_args, 1)
+         local args = utils.processArgs(raw_args, valid_args[cmd] or {})
+         if cmd == 'help' then
+            if show_help then show_help(args) end
+         elseif cmd == 'search' then
+            search_all(args)
+         elseif cmd == 'build' then
+            if args.preset then PRESETNAME = args.preset end
+            find_unicorns( args.count or 5 )
+         elseif  tonumber(cmd) then
+            find_unicorns( tonumber(cmd) )
+         elseif cmd then
+            if show_help then show_help() end
+         else
+            find_unicorns(5)
+         end
+      end
+
+      dispatch_command(args)
+#+end_src
