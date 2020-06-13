@@ -11,7 +11,14 @@
 #+title: Finding Rare Embarks with DFHack
 #+property: header-args :noweb yes :comments noweb :padline yes
 
-Some desirable qualities in a Dwarf Fortress are spectacularly rare, and even rarer in combination. Th
+Some desirable qualities in a Dwarf Fortress are spectacularly rare, and even rarer in combination. So the script here generates a load of worlds, searches them for the desired embark and saves the worldgen params of anything that matches. So if you want a frozen terrifying biome by the sea with a volcano and a conifer forest, then set up the search, maybe build a custom set of advanced worldget parameters and, in your nethack console do:
+
+#+begin_example
+[DFHack]# find-unicorns build -preset "PRESET NAME"
+#+end_example
+
+and away you go.
+
 * Embark finder
   :PROPERTIES:
   :ID:       3F402F2C-2C72-4246-B306-3C708C2B121C
@@ -313,10 +320,11 @@ exportparam
       :PROPERTIES:
       :ID:       4EA00158-62FC-43CB-A543-62DEA1D0C9DC
       :END:
-      When we cancel the embark, we do it after we've checked  the map for unicorns, so we can move it into the 'checked' subfolder. The basic code comes from =dfremote=.
+      When we cancel the embark, we do it after we've checked  the map for unicorns, so we can move it into the 'checked' subfolder. The code comes from [[https://github.com/mifki/dfremote/blob/1dfbce342f65fa669466513a5a49fadd269b34ee/lua/embark.lua#L416-L429][=dfremote=]] and it works like this:
+      We check that we're still looking at the embark chooser screen then tell DF that the current screen is the options screen that's brought up when we escape all the way out of the the top level screen and that we've selected the 'abort game' entry. Then we just send the 'SELECT' key and df does the rest. It turns out that simulating an 'Escape' key to bring up the options screen doesn't work, hence this function.
 
       #+name: 99AABECE-47C8-44E3-9948-C58337929E2C
-      #+begin_src lua :noweb-ref embark-cancel :exports none
+      #+begin_src lua :noweb-ref embark-cancel
 -- Borrowed from dfremote
 function embark_cancel()
    local ws = dfhack.gui.getCurViewscreen()
@@ -342,7 +350,7 @@ end
      :END:
 
   #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
-  #+begin_src lua :tangle ./find-unicorns.lua 
+  #+begin_src lua :tangle ./find-unicorns.lua
 -- Generate worlds and search for ones matching the embark assistant profile
 --@module = true
 --[====[
