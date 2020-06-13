@@ -41,7 +41,7 @@ Some desirable qualities in a Dwarf Fortress are spectacularly rare, and even ra
     This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world.
 
 #+name:exportparams
-#+begin_src lua :exports none
+#+begin_src lua
 function exportparamset(file)
   if not dfhack.isWorldLoaded () then
     dfhack.color (COLOR_LIGHTRED)
@@ -607,9 +607,8 @@ end
     :PROPERTIES:
     :ID:       B17D934C-C09E-4755-8091-93CE85CCE515
     :END:
-    #+name parse-args
-    #+name: 2BDB6353-C488-400A-AD07-5F66E608C172
-    #+begin_src lua :noweb-ref parse-args :exports none
+    #+name: parse-args
+    #+begin_src lua :noweb-ref parse-args
       utils = require('utils')
       local valid_args = {
          help = {},
