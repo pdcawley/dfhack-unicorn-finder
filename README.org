@@ -284,12 +284,13 @@ end
 
 #+name: 27A57D34-29C9-44B7-9BCF-BA8489A706DF
 #+begin_src lua :tangle ./exportparams.lua
-      --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
+--  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
 --[====[
 
 exportparam
 ==========
 ]====]
+«generated-file-preamble»
 
       «exportparams»
 
@@ -352,6 +353,7 @@ end
    embark that matches our embark-assistant profile.
 
 ]====]
+«generated-file-preamble»
 
 local PRESETNAME  = 'PDC1'
 local gui = require 'gui'
@@ -638,3 +640,14 @@ end
 
       dispatch_command(args)
 #+end_src
+
+*** Useful code fragments
+    :PROPERTIES:
+    :ID:       89B0F046-C2FA-41A9-81E7-059D102598C8
+    :END:
+    #+name: 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69
+    #+begin_src emacs-lisp :noweb-ref generated-file-preamble
+      -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
+      -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
+      -- planning to contribute to the project.
+    #+end_src
