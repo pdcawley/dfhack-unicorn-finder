@@ -20,15 +20,7 @@ Some desirable qualities in a Dwarf Fortress are spectacularly rare, and even ra
    :PROPERTIES:
    :ID:       609B6B4A-D59B-4770-8118-83269A73AD87
    :END:
-*** Character targets in Embark Screen
-    :PROPERTIES:
-    :ID:       6A2F31DC-D35F-49B5-816F-E463AF0BDBC7
-    :END:
-    | Description      | char | fg | bg | bold? | x | y |
-    |------------------+------+----+----+-------+---+---|
-    | Found Count      |   48 | 14 |  0 |       |   |   |
-    | Search candidate |   88 |  0 | 14 |       |   |   |
-    |                  |      |    |    |       |   |   |
+
 ** The actual script
    :PROPERTIES:
    :ID:       DBC4D144-9717-4546-AAFF-CCEC33E42F34
