@@ -9,6 +9,7 @@
 # End:
 
 #+title: Finding Rare Embarks with DFHack
+#+property: header-args :noweb yes
 
 Some desirable qualities in a Dwarf Fortress are spectacularly rare, and even rarer in combination. Th
 * Embark finder
@@ -282,7 +283,7 @@ end
 #+end_src
 
 #+name: 27A57D34-29C9-44B7-9BCF-BA8489A706DF
-#+begin_src lua :tangle ./exportparams.lua :noweb yes
+#+begin_src lua :tangle ./exportparams.lua
       --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
 --[====[
 
@@ -340,7 +341,7 @@ end
      :END:
 
   #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
-  #+begin_src lua :tangle ./find-unicorns.lua :noweb yes
+  #+begin_src lua :tangle ./find-unicorns.lua 
 -- Generate worlds and search for ones matching the embark assistant profile
 --@module = true
 --[====[
