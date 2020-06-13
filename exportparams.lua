@@ -1,3 +1,4 @@
+-- [[id:E2533821-8711-4F35-81C0-699AC9E2328B][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]
 --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
 --[====[
 
@@ -5,6 +6,7 @@
    ==========
 ]====]
 
+-- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -250,5 +252,7 @@ function exportparamset(file)
    file:flush()
    file:close()
 end
+-- exportparams ends here
 
 exportparamset()
+-- 27A57D34-29C9-44B7-9BCF-BA8489A706DF ends here

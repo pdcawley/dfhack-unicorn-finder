@@ -9,7 +9,7 @@
 # End:
 
 #+title: Finding Rare Embarks with DFHack
-#+property: header-args :noweb yes
+#+property: header-args :noweb yes :comments noweb :padline yes
 
 Some desirable qualities in a Dwarf Fortress are spectacularly rare, and even rarer in combination. Th
 * Embark finder

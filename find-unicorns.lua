@@ -1,3 +1,4 @@
+-- [[id:B66ACCBE-004A-4875-940C-383056272D18][F256E592-CC29-44E8-99D5-293AEDBB0AB6]]
 -- Generate worlds and search for ones matching the embark assistant profile
 --@module = true
 --[====[
@@ -24,6 +25,7 @@ local worldsFound = 0
 
 local onSearchComplete = dfhack.event.new()
 
+-- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -269,6 +271,7 @@ function exportparamset(file)
    file:flush()
    file:close()
 end
+-- exportparams ends here
 
 function istrue(v)
    return v ~= nil and v ~= false and v ~= 0
@@ -282,6 +285,7 @@ function send_key(k)
    gui.simulateInput(dfhack.gui.getCurViewscreen(), k)
 end
 
+-- [[[[id:4EA00158-62FC-43CB-A543-62DEA1D0C9DC][Cancel the embark]]][99AABECE-47C8-44E3-9948-C58337929E2C]]
 -- Borrowed from dfremote
 function embark_cancel()
    local ws = dfhack.gui.getCurViewscreen()
@@ -299,6 +303,7 @@ function embark_cancel()
    gui.simulateInput(optsws, 'SELECT')
 end
 
+-- 99AABECE-47C8-44E3-9948-C58337929E2C ends here
 
 function start_advanced_worldgen()
    local ws = dfhack.gui.getCurViewscreen()
@@ -508,6 +513,7 @@ end
 
 
 if not moduleMode then
+   -- [[[[id:B17D934C-C09E-4755-8091-93CE85CCE515][Parsing params]]][parse-args]]
    utils = require('utils')
    local valid_args = {
       help = {},
@@ -543,4 +549,6 @@ if not moduleMode then
    end
 
    dispatch_command(args)
+   -- parse-args ends here
 end
+-- F256E592-CC29-44E8-99D5-293AEDBB0AB6 ends here
