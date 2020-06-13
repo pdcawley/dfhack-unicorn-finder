@@ -5,7 +5,7 @@
    exportparam
    ==========
 ]====]
--- [[[[id:89B0F046-C2FA-41A9-81E7-059D102598C8][Useful code fragments]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
+-- [[[[id:F95D4166-9704-4F36-8C7F-17C25CDE816B][Generated code preamble.]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
 -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
 -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
 -- planning to contribute to the project.

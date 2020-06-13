@@ -33,15 +33,44 @@ and away you go.
    :PROPERTIES:
    :ID:       DBC4D144-9717-4546-AAFF-CCEC33E42F34
    :END:
-*** Saving the paramset
+*** Support code
     :PROPERTIES:
-    :ID:       E2533821-8711-4F35-81C0-699AC9E2328B
+    :ID:       C4C65CDF-84AA-42BB-9224-C6C1E36C5769
+    :header-args+: :noweb-ref support-code
     :END:
 
-    This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world.
+**** Defaults
+     :PROPERTIES:
+     :ID:       FC6CD072-AD15-46CC-AE14-F35E16377D19
+     :END:
 
-#+name:exportparams
-#+begin_src lua
+     The initial version of this script didn't really take any arguments, I just named a worldgen paramset =PDC1= and did:
+
+     #+begin_example
+     [DFHack]# find-unicorns
+     #+end_example
+and the script would toddle off and generate worlds using that preset and search for embarks. This is a holdover from when this was a Keyboard Maestro script on my mac, and the way I could check that the right preset had been selected was to look for the image of the highlighted name in the Dwarf Fortress window. Which is one of the reasons why the script was very fragile and not for distribution. Now we're ported to run within dfhack, we don't have that problem. However, it's nice to be able to just have =find-unicorns= do the right thing, so if you're always going to be generating a =LARGE ISLAND= as your candidate world, you can change the =PRESETNAME= value here and never have to do =find-unicorns build -preset "LARGE ISLAND"= again. Because I love you and support your entirely justified laziness.
+
+     #+name: B88BC91A-85F7-4587-BC42-B48C4F60FB58
+     #+begin_src lua :noweb-ref defaults
+local PRESETNAME  = 'PDC1'
+local COUNT = 5
+     #+end_src
+****  World Generation
+     :PROPERTIES:
+     :ID:       6B640E57-FD18-4DC5-9195-14284AE72BCC
+     :END:
+
+
+**** Saving the paramset
+     :PROPERTIES:
+     :ID:       E2533821-8711-4F35-81C0-699AC9E2328B
+     :END:
+
+     This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world.
+
+ #+name:exportparams
+ #+begin_src lua
 function exportparamset(file)
   if not dfhack.isWorldLoaded () then
     dfhack.color (COLOR_LIGHTRED)
@@ -287,10 +316,10 @@ function exportparamset(file)
   file:flush()
   file:close()
 end
-#+end_src
+ #+end_src
 
-#+name: 27A57D34-29C9-44B7-9BCF-BA8489A706DF
-#+begin_src lua :tangle ./exportparams.lua
+ #+name: 27A57D34-29C9-44B7-9BCF-BA8489A706DF
+ #+begin_src lua :tangle ./exportparams.lua
 --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
 --[====[
 
@@ -303,28 +332,17 @@ exportparam
 
       exportparamset()
 
-#+end_src
+ #+end_src
 
-***  World Generation
-    :PROPERTIES:
-    :ID:       6B640E57-FD18-4DC5-9195-14284AE72BCC
-    :END:
-
-
-**** Support code
+**** Cancel the embark
      :PROPERTIES:
-     :ID:       C4C65CDF-84AA-42BB-9224-C6C1E36C5769
+     :ID:       4EA00158-62FC-43CB-A543-62DEA1D0C9DC
      :END:
+     When we cancel the embark, we do it after we've checked  the map for unicorns, so we can move it into the 'checked' subfolder. The code comes from [[https://github.com/mifki/dfremote/blob/1dfbce342f65fa669466513a5a49fadd269b34ee/lua/embark.lua#L416-L429][=dfremote=]] and it works like this:
+     We check that we're still looking at the embark chooser screen then tell DF that the current screen is the options screen that's brought up when we escape all the way out of the the top level screen and that we've selected the 'abort game' entry. Then we just send the 'SELECT' key and df does the rest. It turns out that simulating an 'Escape' key to bring up the options screen doesn't work, hence this function.
 
-***** Cancel the embark
-      :PROPERTIES:
-      :ID:       4EA00158-62FC-43CB-A543-62DEA1D0C9DC
-      :END:
-      When we cancel the embark, we do it after we've checked  the map for unicorns, so we can move it into the 'checked' subfolder. The code comes from [[https://github.com/mifki/dfremote/blob/1dfbce342f65fa669466513a5a49fadd269b34ee/lua/embark.lua#L416-L429][=dfremote=]] and it works like this:
-      We check that we're still looking at the embark chooser screen then tell DF that the current screen is the options screen that's brought up when we escape all the way out of the the top level screen and that we've selected the 'abort game' entry. Then we just send the 'SELECT' key and df does the rest. It turns out that simulating an 'Escape' key to bring up the options screen doesn't work, hence this function.
-
-      #+name: 99AABECE-47C8-44E3-9948-C58337929E2C
-      #+begin_src lua :noweb-ref embark-cancel
+     #+name: 99AABECE-47C8-44E3-9948-C58337929E2C
+     #+begin_src lua
 -- Borrowed from dfremote
 function embark_cancel()
    local ws = dfhack.gui.getCurViewscreen()
@@ -342,15 +360,15 @@ function embark_cancel()
    gui.simulateInput(optsws, 'SELECT')
 end
 
-      #+end_src
+     #+end_src
 
-**** Generation and search script
-     :PROPERTIES:
-     :ID:       B66ACCBE-004A-4875-940C-383056272D18
-     :END:
+*** Generation and search script
+    :PROPERTIES:
+    :ID:       B66ACCBE-004A-4875-940C-383056272D18
+    :END:
 
-  #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
-  #+begin_src lua :tangle ./find-unicorns.lua
+ #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
+ #+begin_src lua :tangle ./find-unicorns.lua
 -- Generate worlds and search for ones matching the embark assistant profile
 --@module = true
 --[====[
@@ -363,7 +381,7 @@ end
 ]====]
 «generated-file-preamble»
 
-local PRESETNAME  = 'PDC1'
+«defaults»
 local gui = require 'gui'
 local utils = require 'utils'
 local WORLD_GEN_MENU_ID=3
@@ -392,7 +410,7 @@ function send_key(k)
    gui.simulateInput(dfhack.gui.getCurViewscreen(), k)
 end
 
-«embark-cancel»
+«support-code»
 
 function start_advanced_worldgen()
    local ws = dfhack.gui.getCurViewscreen()
@@ -604,7 +622,7 @@ end
 if not moduleMode then
    «parse-args»
 end
-  #+end_src
+ #+end_src
 
 *** Parsing params
     :PROPERTIES:
@@ -636,13 +654,13 @@ end
             search_all(args)
          elseif cmd == 'build' then
             if args.preset then PRESETNAME = args.preset end
-            find_unicorns( args.count or 5 )
+            find_unicorns( args.count or COUNT )
          elseif  tonumber(cmd) then
             find_unicorns( tonumber(cmd) )
          elseif cmd then
             if show_help then show_help() end
          else
-            find_unicorns(5)
+            find_unicorns(COUNT)
          end
       end
 
@@ -653,9 +671,17 @@ end
     :PROPERTIES:
     :ID:       89B0F046-C2FA-41A9-81E7-059D102598C8
     :END:
-    #+name: 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69
-    #+begin_src emacs-lisp :noweb-ref generated-file-preamble
+
+**** Generated code preamble.
+     :PROPERTIES:
+     :ID:       F95D4166-9704-4F36-8C7F-17C25CDE816B
+     :END:
+
+     If you want to contribute bugfixes or improvements, then it's best if contribute patches to /this/ file rather than the script files that are generated from it. So we stick a comment to that effect, with a reference back to the github repo into each generated file. That way, no matter where the scripts go, anyone who takes a look at them will be able to contribute back.
+
+     #+name: 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69
+     #+begin_src emacs-lisp :noweb-ref generated-file-preamble
       -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
       -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
       -- planning to contribute to the project.
-    #+end_src
+     #+end_src
