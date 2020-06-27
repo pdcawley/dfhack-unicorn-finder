@@ -70,7 +70,7 @@ local COUNT = 5
      This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world.
 
  #+name:exportparams
- #+begin_src lua
+ #+begin_src lua:noweb-ref exportparams
 function exportparamset(file)
   if not dfhack.isWorldLoaded () then
     dfhack.color (COLOR_LIGHTRED)

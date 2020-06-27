@@ -1,17 +1,17 @@
--- [[id:E2533821-8711-4F35-81C0-699AC9E2328B][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]
+-- [[file:~/Projects/dfhack-unicorn-finder/README.org::27A57D34-29C9-44B7-9BCF-BA8489A706DF][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]
 --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
 --[====[
 
    exportparam
    ==========
 ]====]
--- [[[[id:F95D4166-9704-4F36-8C7F-17C25CDE816B][Generated code preamble.]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
 -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
 -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
 -- planning to contribute to the project.
 -- 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69 ends here
 
--- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::exportparams][exportparams]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)

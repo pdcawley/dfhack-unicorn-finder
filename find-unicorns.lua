@@ -1,4 +1,4 @@
--- [[id:B66ACCBE-004A-4875-940C-383056272D18][F256E592-CC29-44E8-99D5-293AEDBB0AB6]]
+-- [[file:~/Projects/dfhack-unicorn-finder/README.org::F256E592-CC29-44E8-99D5-293AEDBB0AB6][F256E592-CC29-44E8-99D5-293AEDBB0AB6]]
 -- Generate worlds and search for ones matching the embark assistant profile
 --@module = true
 --[====[
@@ -9,13 +9,13 @@
    embark that matches our embark-assistant profile.
 
 ]====]
--- [[[[id:F95D4166-9704-4F36-8C7F-17C25CDE816B][Generated code preamble.]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
 -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
 -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
 -- planning to contribute to the project.
 -- 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69 ends here
 
--- [[[[id:FC6CD072-AD15-46CC-AE14-F35E16377D19][Defaults]]][B88BC91A-85F7-4587-BC42-B48C4F60FB58]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::B88BC91A-85F7-4587-BC42-B48C4F60FB58][B88BC91A-85F7-4587-BC42-B48C4F60FB58]]][B88BC91A-85F7-4587-BC42-B48C4F60FB58]]
 local PRESETNAME  = 'PDC1'
 local COUNT = 5
 -- B88BC91A-85F7-4587-BC42-B48C4F60FB58 ends here
@@ -33,7 +33,7 @@ local worldsFound = 0
 
 local onSearchComplete = dfhack.event.new()
 
--- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::exportparams][exportparams]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -293,7 +293,7 @@ function send_key(k)
    gui.simulateInput(dfhack.gui.getCurViewscreen(), k)
 end
 
--- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::exportparams][exportparams]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -540,20 +540,20 @@ function exportparamset(file)
    file:close()
 end
 -- exportparams ends here
--- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::27A57D34-29C9-44B7-9BCF-BA8489A706DF][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]
 --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
 --[====[
 
    exportparam
    ==========
 ]====]
--- [[[[id:F95D4166-9704-4F36-8C7F-17C25CDE816B][Generated code preamble.]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
 -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
 -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
 -- planning to contribute to the project.
 -- 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69 ends here
 
--- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::exportparams][exportparams]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -804,7 +804,7 @@ end
 exportparamset()
 
 -- 27A57D34-29C9-44B7-9BCF-BA8489A706DF ends here
--- [[[[id:4EA00158-62FC-43CB-A543-62DEA1D0C9DC][Cancel the embark]]][99AABECE-47C8-44E3-9948-C58337929E2C]]
+-- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::99AABECE-47C8-44E3-9948-C58337929E2C][99AABECE-47C8-44E3-9948-C58337929E2C]]][99AABECE-47C8-44E3-9948-C58337929E2C]]
 -- Borrowed from dfremote
 function embark_cancel()
    local ws = dfhack.gui.getCurViewscreen()
@@ -1032,7 +1032,7 @@ end
 
 
 if not moduleMode then
-   -- [[[[id:B17D934C-C09E-4755-8091-93CE85CCE515][Parsing params]]][parse-args]]
+   -- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::parse-args][parse-args]]][parse-args]]
    utils = require('utils')
    local valid_args = {
       help = {},
