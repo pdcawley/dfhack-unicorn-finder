@@ -387,7 +387,9 @@ local utils = require 'utils'
 local WORLD_GEN_MENU_ID=3
 local worldgen_confirmed  = false
 
-local SEARCHRESULTS_PATH = dfhack.getDFPath() .. "/data/init/embark_assistant_fileresult.txt"
+local INIT_DIR = dfhack.getDFPath() .. '/data/init/'
+local SEARCHRESULTS_FILE = 'embark_assistant_fileresult.txt'
+local SEARCHRESULTS_PATH = INIT_DIR .. SEARCHRESULTS_FILE
 local UNICORNPRESETS_PATH = dfhack.getDFPath() .. '/data/init/unicorn_presets.txt'
 
 local target_region = false
@@ -577,7 +579,10 @@ end
 
 function do_search()
    -- remove any previous file results
-   os.remove( SEARCHRESULTS_PATH)
+   local cwd = dfhack.filesystem.getcwd()
+   dfhack.filesystem.chdir(INIT_DIR)
+   os.remove( SEARCHRESULTS_FILE)
+   dfhack.filesystem.chdir(cwd)
    dfhack.run_command('embark-assistant', 'fileresult')
    dfhack.timeout(10,'frames', await_search_results)
 end

@@ -1,4 +1,4 @@
--- [[file:~/Projects/dfhack-unicorn-finder/README.org::F256E592-CC29-44E8-99D5-293AEDBB0AB6][F256E592-CC29-44E8-99D5-293AEDBB0AB6]]
+-- [[id:B66ACCBE-004A-4875-940C-383056272D18][F256E592-CC29-44E8-99D5-293AEDBB0AB6]]
 -- Generate worlds and search for ones matching the embark assistant profile
 --@module = true
 --[====[
@@ -9,13 +9,13 @@
    embark that matches our embark-assistant profile.
 
 ]====]
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
+-- [[[[id:F95D4166-9704-4F36-8C7F-17C25CDE816B][Generated code preamble.]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
 -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
 -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
 -- planning to contribute to the project.
 -- 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69 ends here
 
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::B88BC91A-85F7-4587-BC42-B48C4F60FB58][B88BC91A-85F7-4587-BC42-B48C4F60FB58]]][B88BC91A-85F7-4587-BC42-B48C4F60FB58]]
+-- [[[[id:FC6CD072-AD15-46CC-AE14-F35E16377D19][Defaults]]][B88BC91A-85F7-4587-BC42-B48C4F60FB58]]
 local PRESETNAME  = 'PDC1'
 local COUNT = 5
 -- B88BC91A-85F7-4587-BC42-B48C4F60FB58 ends here
@@ -24,7 +24,9 @@ local utils = require 'utils'
 local WORLD_GEN_MENU_ID=3
 local worldgen_confirmed  = false
 
-local SEARCHRESULTS_PATH = dfhack.getDFPath() .. "/data/init/embark_assistant_fileresult.txt"
+local INIT_DIR = dfhack.getDFPath() .. '/data/init/'
+local SEARCHRESULTS_FILE = 'embark_assistant_fileresult.txt'
+local SEARCHRESULTS_PATH = INIT_DIR .. SEARCHRESULTS_FILE
 local UNICORNPRESETS_PATH = dfhack.getDFPath() .. '/data/init/unicorn_presets.txt'
 
 local target_region = false
@@ -33,7 +35,7 @@ local worldsFound = 0
 
 local onSearchComplete = dfhack.event.new()
 
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::exportparams][exportparams]]][exportparams]]
+-- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -293,7 +295,7 @@ function send_key(k)
    gui.simulateInput(dfhack.gui.getCurViewscreen(), k)
 end
 
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::exportparams][exportparams]]][exportparams]]
+-- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -540,20 +542,20 @@ function exportparamset(file)
    file:close()
 end
 -- exportparams ends here
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::27A57D34-29C9-44B7-9BCF-BA8489A706DF][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]
+-- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][27A57D34-29C9-44B7-9BCF-BA8489A706DF]]
 --  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
 --[====[
 
    exportparam
    ==========
 ]====]
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
+-- [[[[id:F95D4166-9704-4F36-8C7F-17C25CDE816B][Generated code preamble.]]][5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69]]
 -- NB: This file is generated from README.org https://github.com/pdcawley/dfhack-unicorn-finder.
 -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
 -- planning to contribute to the project.
 -- 5D0EA62F-5F4B-42F7-B7FB-3DEFD118DF69 ends here
 
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::exportparams][exportparams]]][exportparams]]
+-- [[[[id:E2533821-8711-4F35-81C0-699AC9E2328B][Saving the paramset]]][exportparams]]
 function exportparamset(file)
    if not dfhack.isWorldLoaded () then
       dfhack.color (COLOR_LIGHTRED)
@@ -804,7 +806,7 @@ end
 exportparamset()
 
 -- 27A57D34-29C9-44B7-9BCF-BA8489A706DF ends here
--- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::99AABECE-47C8-44E3-9948-C58337929E2C][99AABECE-47C8-44E3-9948-C58337929E2C]]][99AABECE-47C8-44E3-9948-C58337929E2C]]
+-- [[[[id:4EA00158-62FC-43CB-A543-62DEA1D0C9DC][Cancel the embark]]][99AABECE-47C8-44E3-9948-C58337929E2C]]
 -- Borrowed from dfremote
 function embark_cancel()
    local ws = dfhack.gui.getCurViewscreen()
@@ -989,7 +991,10 @@ end
 
 function do_search()
    -- remove any previous file results
-   os.remove( SEARCHRESULTS_PATH)
+   local cwd = dfhack.filesystem.getcwd()
+   dfhack.filesystem.chdir(INIT_DIR)
+   os.remove( SEARCHRESULTS_FILE)
+   dfhack.filesystem.chdir(cwd)
    dfhack.run_command('embark-assistant', 'fileresult')
    dfhack.timeout(10,'frames', await_search_results)
 end
@@ -1032,7 +1037,7 @@ end
 
 
 if not moduleMode then
-   -- [[[[file:~/Projects/dfhack-unicorn-finder/README.org::parse-args][parse-args]]][parse-args]]
+   -- [[[[id:B17D934C-C09E-4755-8091-93CE85CCE515][Parsing params]]][parse-args]]
    utils = require('utils')
    local valid_args = {
       help = {},
