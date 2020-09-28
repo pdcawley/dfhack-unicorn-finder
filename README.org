@@ -1,8 +1,6 @@
 # Local Variables:
 # mode: org
 # fill-column: 100
-# eval: (visual-line-mode t)`
-# eval: (visual-fill-column-mode t)
 # org-confirm-babel-evaluate: nil
 # org-babel-noweb-wrap-start: "«"
 # org-babel-noweb-wrap-end: "»"
@@ -24,12 +22,7 @@ and away you go.
   :ID:       3F402F2C-2C72-4246-B306-3C708C2B121C
   :END:
   Sometimes, you want to find some really weird embarks, and the best way to do that, is to generate lots of worlds that have a reasonable probability of having what you want, then winnowing them using =embark-assistant=. So here goes nothing
-** Notes and references
-   :PROPERTIES:
-   :ID:       609B6B4A-D59B-4770-8118-83269A73AD87
-   :END:
-
-** The actual script
+** Implementation
    :PROPERTIES:
    :ID:       DBC4D144-9717-4546-AAFF-CCEC33E42F34
    :END:
@@ -39,38 +32,15 @@ and away you go.
     :header-args+: :noweb-ref support-code
     :END:
 
-**** Defaults
-     :PROPERTIES:
-     :ID:       FC6CD072-AD15-46CC-AE14-F35E16377D19
-     :END:
-
-     The initial version of this script didn't really take any arguments, I just named a worldgen paramset =PDC1= and did:
-
-     #+begin_example
-     [DFHack]# find-unicorns
-     #+end_example
-and the script would toddle off and generate worlds using that preset and search for embarks. This is a holdover from when this was a Keyboard Maestro script on my mac, and the way I could check that the right preset had been selected was to look for the image of the highlighted name in the Dwarf Fortress window. Which is one of the reasons why the script was very fragile and not for distribution. Now we're ported to run within dfhack, we don't have that problem. However, it's nice to be able to just have =find-unicorns= do the right thing, so if you're always going to be generating a =LARGE ISLAND= as your candidate world, you can change the =PRESETNAME= value here and never have to do =find-unicorns build -preset "LARGE ISLAND"= again. Because I love you and support your entirely justified laziness.
-
-     #+name: B88BC91A-85F7-4587-BC42-B48C4F60FB58
-     #+begin_src lua :noweb-ref defaults
-local PRESETNAME  = 'PDC1'
-local COUNT = 5
-     #+end_src
-****  World Generation
-     :PROPERTIES:
-     :ID:       6B640E57-FD18-4DC5-9195-14284AE72BCC
-     :END:
-
-
 **** Saving the paramset
      :PROPERTIES:
      :ID:       E2533821-8711-4F35-81C0-699AC9E2328B
      :END:
 
-     This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world.
+     This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world. (This turns out not to be quite the safe assumption I had assumed it was, though it seems that topology is safe, sometimes different computers, even on the same OS, with the same seeds produce different biomes and evil/good distributions, which is weird)
 
  #+name:exportparams
- #+begin_src lua:noweb-ref exportparams
+ #+begin_src :tangle no
 function exportparamset(file)
   if not dfhack.isWorldLoaded () then
     dfhack.color (COLOR_LIGHTRED)
@@ -318,104 +288,99 @@ function exportparamset(file)
 end
  #+end_src
 
- #+name: 27A57D34-29C9-44B7-9BCF-BA8489A706DF
- #+begin_src lua :tangle ./exportparams.lua
---  Exports the world generation parameters and the map as a parameter set. The file is <DF directory>\data\init\exported_map.txt.
---[====[
-
-exportparam
-==========
-]====]
-«generated-file-preamble»
-
-      «exportparams»
-
-      exportparamset()
-
- #+end_src
-
-**** Cancel the embark
-     :PROPERTIES:
-     :ID:       4EA00158-62FC-43CB-A543-62DEA1D0C9DC
-     :END:
-     When we cancel the embark, we do it after we've checked  the map for unicorns, so we can move it into the 'checked' subfolder. The code comes from [[https://github.com/mifki/dfremote/blob/1dfbce342f65fa669466513a5a49fadd269b34ee/lua/embark.lua#L416-L429][=dfremote=]] and it works like this:
-     We check that we're still looking at the embark chooser screen then tell DF that the current screen is the options screen that's brought up when we escape all the way out of the the top level screen and that we've selected the 'abort game' entry. Then we just send the 'SELECT' key and df does the rest. It turns out that simulating an 'Escape' key to bring up the options screen doesn't work, hence this function.
-
-     #+name: 99AABECE-47C8-44E3-9948-C58337929E2C
-     #+begin_src lua
--- Borrowed from dfremote
-function embark_cancel()
-   local ws = dfhack.gui.getCurViewscreen()
-   if ws._type ~= df.viewscreen_choose_start_sitest then
-      return
-   end
-
-   -- Gather path info while we have the data loaded
-   local optsws = df.viewscreen_optionst:new()
-
-   optsws.options:insert(0,5) -- abort game
-   optsws.parent = ws
-   ws.child = optsws
-
-   gui.simulateInput(optsws, 'SELECT')
-end
-
-     #+end_src
-
-*** Generation and search script
+*** World Generation and Searching
     :PROPERTIES:
     :ID:       B66ACCBE-004A-4875-940C-383056272D18
     :END:
 
- #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
- #+begin_src lua :tangle ./find-unicorns.lua
--- Generate worlds and search for ones matching the embark assistant profile
---@module = true
---[====[
 
-   find-unicorns
-   =============
-   Generate worlds and search for embarks in them until we find at least one
-   embark that matches our embark-assistant profile.
+**** Setting our defaults
+     :PROPERTIES:
+     :ID:       FC6CD072-AD15-46CC-AE14-F35E16377D19
+     :header-args+: :noweb-ref defaults
+     :END:
 
-]====]
-«generated-file-preamble»
+     The initial version of this script didn't really take any arguments, I just named a worldgen paramset =PDC1= and did:
 
-«defaults»
+     #+begin_example
+     [DFHack]# find-unicorns
+     #+end_example
+and the script would toddle off and generate worlds using that preset and search for embarks. This is a holdover from when this was a Keyboard Maestro script on my mac, and the way I could check that the right preset had been selected was to look for the image of the highlighted name in the Dwarf Fortress window. Which is one of the reasons why the script was very fragile and not for distribution. Now we're ported to run within dfhack, we don't have that problem. However, it's nice to be able to just have =find-unicorns= do the right thing, so if you're always going to be generating a =LARGE ISLAND= as your candidate world, you can change the =PRESETNAME= value here and never have to do =find-unicorns build -preset "LARGE ISLAND"= again. Because I love you and support your entirely justified laziness.
+
+***** Preset Name
+      :PROPERTIES:
+      :ID:       13F56866-6F6F-44B2-BEA8-4D1F37FCDCFC
+      :END:
+      =PDC1= is my local worldgen preset that generates a world with lots and lots of volcanoes, lots and lots of waterfalls and lots and lots of minerals. If you're searching for more 'normal' worlds, you might one to specify one of the more generic worldget presets from =data/init/word_gen.txt=
+
+      #+name: B88BC91A-85F7-4587-BC42-B48C4F60FB58
+      #+begin_src lua
+local PRESETNAME  = 'PDC1'
+      #+end_src
+
+***** Desired number of unicorns
+      :PROPERTIES:
+      :ID:       2133B705-D8F3-4CC9-980B-A4D4D8C3D993
+      :END:
+      How many interesting worlds are you looking for? I went with 5.
+      #+name: CC2AA8A0-8E5F-4585-A0FC-796D3A1C67F5
+      #+begin_src lua
+local COUNT = 5
+      #+end_src
+
+**** Variables and constants
+     :PROPERTIES:
+     :header-args+: :noweb-ref varsandconstants :tangle no
+     :ID:       9E4D2CAD-3442-4A1E-99C9-77F5BC380E5C
+     :END:
+***** Loading modules
+      :PROPERTIES:
+      :ID:       D2A21D98-CD0C-4F5E-946C-092BF093E795
+      :END:
+      We use a couple of the extra lua modules provided by =dfhack=, =gui= and =util=, so load them.
+
+      #+name: 21FF2750-4E49-4E30-8A8C-D44D044A41AB
+      #+begin_src lua
 local gui = require 'gui'
 local utils = require 'utils'
-local WORLD_GEN_MENU_ID=3
-local worldgen_confirmed  = false
+      #+end_src
 
+***** Directory and file paths
+      :PROPERTIES:
+      :ID:       689C448F-6226-43E3-B0C1-8ADB7D63943F
+      :END:
+      When we run =embark-assistant= in saveresults mode, we need to know where it's going to drop its results file, and we also need to know where we're going to /save/ our interesting worldgen files
+
+      #+name: 3FD0E505-9ED2-4E52-8C77-F127AF52C655
+      #+begin_src lua
 local INIT_DIR = dfhack.getDFPath() .. '/data/init/'
 local SEARCHRESULTS_FILE = 'embark_assistant_fileresult.txt'
 local SEARCHRESULTS_PATH = INIT_DIR .. SEARCHRESULTS_FILE
 local UNICORNPRESETS_PATH = dfhack.getDFPath() .. '/data/init/unicorn_presets.txt'
+      #+end_src
+***** Event handlers
+      :PROPERTIES:
+      :ID:       389FC436-DC61-4DB4-B26E-0C4E0D251F37
+      :END:
+      What we do when we've found a world depends on which command we started up with. It's tricky to thread arguments through asynchronous calls in lua, so instead we set up an event handler. Now, our command handler register a function to call when the search has completed.
 
-local target_region = false
-local target_worldname_str = ''
-local worldsFound = 0
-
+      #+name: C5309C92-B64B-483E-857D-CFFB6E55FB0D
+      #+begin_src lua
 local onSearchComplete = dfhack.event.new()
 
-«exportparams»
+      #+end_src
+**** Generating the world
+     :PROPERTIES:
+     :ID:       1D3771B2-9974-4023-9F0E-BDE356229BF8
+     :header-args+: :noweb-ref worldgen
+     :END:
 
-function istrue(v)
-   return v ~= nil and v ~= false and v ~= 0
-end
+     We run =find-unicorns= from the title screen or one of its subscreens. The first thing we then do is generate a world that we can check for interesting features.
 
-function K(k)
-   return df.interface_key[k]
-end
+     First we back out of any subscreens, or halt if we can't manage that.
 
-function send_key(k)
-   gui.simulateInput(dfhack.gui.getCurViewscreen(), k)
-end
-
-«support-code»
-
-function start_advanced_worldgen()
-   local ws = dfhack.gui.getCurViewscreen()
+     #+name: CA2E6D31-5E8B-428D-B6E9-821EC6A02AEB
+     #+begin_src lua :noweb-ref wg-gohome
    -- Check we're on the title screen or its subscreens
    while ws and ws.parent and ws._type ~= df.viewscreen_titlest do
       ws = ws.parent
@@ -434,6 +399,15 @@ function start_advanced_worldgen()
       ws = parent
    end
 
+     #+end_src
+
+     Once we're back at the title screen, we select 'create new world with advanced parameters' and make a timeout call to =progress_worldgen=.
+
+     #+name: 8BD32E78-AE76-4555-8C17-7CD56CCB776B
+     #+begin_src lua
+function start_advanced_worldgen()
+   local ws = dfhack.gui.getCurViewscreen()
+   «wg-gohome»
    local titlews = ws --as:df.viewscreen_titlest
 
    titlews.sel_subpage = df.viewscreen_titlest.T_sel_subpage.None
@@ -448,6 +422,11 @@ function start_advanced_worldgen()
    dfhack.timeout(2, 'frames', progress_worldgen)
 end
 
+#+end_src
+
+In =progress_worldgen= we wait until we've finished loading the raws and by checking for the truthiness of the =in_worldgen= and =unk_b8= keys (determined by experiment as much as anything) on the current viewscreen. If they don't exist yet, we know that we're not there yet and call back =progress_worldgen= in another 20 frames' time
+
+#+begin_src: lua
 function progress_worldgen()
    local ws = dfhack.gui.getCurViewscreen() --as:df.viewscreen_new_regionst
 
@@ -458,23 +437,42 @@ function progress_worldgen()
 
    -- If finished loading raws
    if ws.in_worldgen and ws.unk_b8 == 19 then
-      -- Close 'Welcome to ...' message
-      if #ws.welcome_msg > 0 then
-         gui.simulateInput(ws, 'LEAVESCREEN')
-      end
-      for i,p in pairs(ws.worldgen_presets) do
-         if p.anon_1 == PRESETNAME then
-            ws.cursor_paramset = i
-         end
-      end
-
-      gui.simulateInput(ws, 'SELECT')
-      dfhack.timeout(20, 'frames', check_worldgen_done)
-      return
+    «wg-dogen»
    end
    dfhack.timeout(20, 'frames', progress_worldgen)
 end
+#+end_src
 
+Once those keys are set, there's a possibilty that we're at the 'welcome to advanced worldgen, are you sure you want to succeed' dialog that gets thrown up once per launch of Dwarf Fortress, in which case we send the =LEAVESCREEN= key
+
+#+name: 37163D59-B07B-41AA-83A0-012C559ABCD3
+#+begin_src lua :noweb-ref wg-dogen
+-- Close 'Welcome to ...' message
+if #ws.welcome_msg > 0 then
+   gui.simulateInput(ws, 'LEAVESCREEN')
+end
+#+end_src
+
+Then we find the worldgen preset we're looking for in =worldgen_presets=, move the cursor to it, simulate the =SELECT= key, and call =check_worldgen_done= via timeout.
+
+#+name: F2B84F75-53E6-4CC9-A7BC-562922043671
+#+begin_src lua :noweb-ref wg-dogen
+for i,p in pairs(ws.worldgen_presets) do
+   if p.anon_1 == PRESETNAME then
+      ws.cursor_paramset = i
+   end
+end
+
+gui.simulateInput(ws, 'SELECT')
+dfhack.timeout(20, 'frames', check_worldgen_done)
+return
+
+#+end_src
+
+=check_worldgen_done= is another wait loop. This time we're waiting for =df.global.world.worldgen_status.state= to be 10 (the trouble with stuff like dfhack that's being binary patched into a game rather than being supported by the original game dev is that sometimes we're stuck with raw numbers rather than nice semantic names in enums). If it's not 10 yet, we wait 20 frames and re-call ourselves. If generation is complete, we save the world (send the =SELECT= key) and wait until we're back at the title/home screen.
+
+#+name: C979E8EC-04C7-4EEF-A2C4-671C84F370DD
+#+begin_src lua
 function check_worldgen_done()
    if df.global.world.worldgen_status.state == 10 then
       -- worldgen is done!
@@ -487,7 +485,12 @@ function check_worldgen_done()
    end
    dfhack.timeout(20, 'frames', check_worldgen_done)
 end
+#+end_src
 
+=wait_for_home_screen= is another wait loop (this is such a pattern I'm half inclined to extract it into a =wait_for(test_closure, continuation)= helper function. If I were writing this in a lisp, I would definitely have made a macro by now). This time we're waiting until the current viewscreen in the title screen, whereup we make a timeout call to =start_search=
+
+#+name: DE6675EC-14C1-44F4-9D7D-C0EDBDA96EB2
+#+begin_src lua
 function wait_for_home_screen()
    local ws = dfhack.gui.getCurViewscreen()
    if ws._type ~= df.viewscreen_titlest then
@@ -496,6 +499,121 @@ function wait_for_home_screen()
    end
    dfhack.timeout(2,'frames', start_search)
 end
+
+     #+end_src
+**** Searching the world
+     :PROPERTIES:
+     :ID:       F1368149-84E7-4F7E-814E-500A825D88B5
+     :END:
+***** Spotting search completion
+      :PROPERTIES:
+      :ID:       C9BBA774-5529-45E3-ACE9-E63990E9382A
+      :END:
+      It turns out that my initial approach of deleting the searchresults file and just waiting for it to reappear doesn't work cross-platform. My windows box keeps making =data/init= readonly, as far as the script is concerned. Which isn't ideal. So now we setup a variable to track the last time the results file was modified
+
+      #+name: 2485886C-816F-48A0-8FDA-B480DEDB8E1A
+      #+begin_src lua :noweb-ref varsandconstants
+local LAST_SEARCHRESULTS_MTIME = -1
+      #+end_src
+
+      Now, when we start the search, we set =LAST_SEARCHRESULTS_MTIME= to the mtime of the search results file:
+      #+name: A51ED52A-ECAC-4B01-A36E-03AB63788093
+      #+begin_src lua :noweb-ref search
+function do_search()
+   -- Returns -1 if file doesn't
+   LAST_SEARCHRESULTS_MTIME = dfhack.filesystem.mtime(SEARCHRESULTS_PATH)
+   dfhack.run_command('embark-assistant', 'fileresult')
+   dfhack.timeout(10,'frames', await_search_results)
+end
+ #+end_src
+
+ And we check that the search is done by comparing the current mtime of the results file with the one we saved at the beginning of the search. If it's changed, then we've found something and we can proceed.
+
+ #+name: 038C4555-4AE7-486D-B075-CF587877046D
+ #+begin_src lua :noweb-ref search
+function await_search_results()
+   local touched_at = dfhack.filesystem.mtime(SEARCHRESULTS_PATH)
+   if touched_at > LAST_SEARCHRESULTS_MTIME then
+      local r,err = io.open(SEARCHRESULTS_PATH, 'r')
+      if not err then
+         local count = r:read('*number')
+         send_key('CUSTOM_Q')
+         search_got_result(count)
+         return
+      end
+   end
+   dfhack.timeout(5, 'frames',  await_search_results)
+end
+
+      #+end_src
+***** Cancelling the embark
+      :PROPERTIES:
+      :ID:       4EA00158-62FC-43CB-A543-62DEA1D0C9DC
+      :END:
+      This code comes from [[https://github.com/mifki/dfremote/blob/1dfbce342f65fa669466513a5a49fadd269b34ee/lua/embark.lua#L416-L429][=dfremote=]] and it works like this:
+      We check that we're still looking at the embark chooser screen then tell DF that the current screen is the options screen that's brought up when we escape all the way out of the the top level screen and that we've selected the 'abort game' entry. Then we just send the 'SELECT' key and df does the rest. It turns out that simulating an 'Escape' key to bring up the options screen doesn't work, hence this function.
+
+      #+name: 99AABECE-47C8-44E3-9948-C58337929E2C
+      #+begin_src lua
+-- Borrowed from dfremote
+function embark_cancel()
+   local ws = dfhack.gui.getCurViewscreen()
+   if ws._type ~= df.viewscreen_choose_start_sitest then
+      return
+   end
+
+   -- Gather path info while we have the data loaded
+   local optsws = df.viewscreen_optionst:new()
+
+   optsws.options:insert(0,5) -- abort game
+   optsws.parent = ws
+   ws.child = optsws
+
+   gui.simulateInput(optsws, 'SELECT')
+end
+
+      #+end_src
+
+**** Script template
+     :PROPERTIES:
+     :ID:       7C1EF619-BC0D-4300-8409-0BDAFCA25535
+     :END:
+  #+name: F256E592-CC29-44E8-99D5-293AEDBB0AB6
+  #+begin_src lua :tangle ./find-unicorns.lua
+-- Generate worlds and search for ones matching the embark assistant profile
+--@module = true
+--[====[
+
+   find-unicorns
+   =============
+   Generate worlds and search for embarks in them until we find at least one
+   embark that matches our embark-assistant profile.and
+
+]====]
+«generated-file-preamble»
+
+«defaults»
+«varsandconstants»
+
+local target_region = false
+local target_worldname_str = ''
+local worldsFound = 0
+
+function istrue(v)
+   return v ~= nil and v ~= false and v ~= 0
+end
+
+function K(k)
+   return df.interface_key[k]
+end
+
+function send_key(k)
+   gui.simulateInput(dfhack.gui.getCurViewscreen(), k)
+end
+
+«support-code»
+«worldgen»
+
 
 function find_unicorns(desired)
    onSearchComplete.singleSearch = function (count)
@@ -577,27 +695,6 @@ function progress_embark()
    do_search()
 end
 
-function do_search()
-   -- remove any previous file results
-   local cwd = dfhack.filesystem.getcwd()
-   dfhack.filesystem.chdir(INIT_DIR)
-   os.remove( SEARCHRESULTS_FILE)
-   dfhack.filesystem.chdir(cwd)
-   dfhack.run_command('embark-assistant', 'fileresult')
-   dfhack.timeout(10,'frames', await_search_results)
-end
-
-function await_search_results()
-   local r,err = io.open(SEARCHRESULTS_PATH, 'r')
-   if not err then
-      local count = r:read('*number')
-      send_key('CUSTOM_Q')
-      search_got_result(count)
-      return
-   end
-   dfhack.timeout(5, 'frames',  await_search_results)
-end
-
 function search_got_result(count)
    if count > 0 then
       worldsFound = worldsFound + 1
@@ -607,6 +704,8 @@ function search_got_result(count)
    onSearchComplete(count)
    return
 end
+
+«search»
 
 function show_help()
    print "find-unicorns search -- Searches all the existing saves for something"
@@ -627,7 +726,7 @@ end
 if not moduleMode then
    «parse-args»
 end
- #+end_src
+  #+end_src
 
 *** Parsing params
     :PROPERTIES:
@@ -690,3 +789,8 @@ end
       -- Ideally, you should edit that file and regenerate this, but it only really matters if you are
       -- planning to contribute to the project.
      #+end_src
+** Notes and references
+   :PROPERTIES:
+   :ID:       609B6B4A-D59B-4770-8118-83269A73AD87
+   :END:
+
