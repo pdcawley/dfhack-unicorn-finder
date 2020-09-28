@@ -40,7 +40,7 @@ and away you go.
      This is lifted from PatrikLundell's =savemap= script but we're not saving elvation and rainfall maps. We rely instead on reusing the seeds to reliably regenerate the same world. (This turns out not to be quite the safe assumption I had assumed it was, though it seems that topology is safe, sometimes different computers, even on the same OS, with the same seeds produce different biomes and evil/good distributions, which is weird)
 
  #+name:exportparams
- #+begin_src :tangle no
+ #+begin_src lua :tangle no
 function exportparamset(file)
   if not dfhack.isWorldLoaded () then
     dfhack.color (COLOR_LIGHTRED)
@@ -379,7 +379,7 @@ local onSearchComplete = dfhack.event.new()
 
      First we back out of any subscreens, or halt if we can't manage that.
 
-     #+name: CA2E6D31-5E8B-428D-B6E9-821EC6A02AEB
+     #+name: wg-gohome
      #+begin_src lua :noweb-ref wg-gohome
    -- Check we're on the title screen or its subscreens
    while ws and ws.parent and ws._type ~= df.viewscreen_titlest do
@@ -403,7 +403,7 @@ local onSearchComplete = dfhack.event.new()
 
      Once we're back at the title screen, we select 'create new world with advanced parameters' and make a timeout call to =progress_worldgen=.
 
-     #+name: 8BD32E78-AE76-4555-8C17-7CD56CCB776B
+     #+name: wg-start-advanced-worldgen
      #+begin_src lua
 function start_advanced_worldgen()
    local ws = dfhack.gui.getCurViewscreen()
@@ -426,7 +426,8 @@ end
 
 In =progress_worldgen= we wait until we've finished loading the raws and by checking for the truthiness of the =in_worldgen= and =unk_b8= keys (determined by experiment as much as anything) on the current viewscreen. If they don't exist yet, we know that we're not there yet and call back =progress_worldgen= in another 20 frames' time
 
-#+begin_src: lua
+#+name: wg-progress-worldgen
+#+begin_src lua
 function progress_worldgen()
    local ws = dfhack.gui.getCurViewscreen() --as:df.viewscreen_new_regionst
 
@@ -445,7 +446,7 @@ end
 
 Once those keys are set, there's a possibilty that we're at the 'welcome to advanced worldgen, are you sure you want to succeed' dialog that gets thrown up once per launch of Dwarf Fortress, in which case we send the =LEAVESCREEN= key
 
-#+name: 37163D59-B07B-41AA-83A0-012C559ABCD3
+#+name: 5963F7D7-1999-4114-AA58-2C84E2F6F300
 #+begin_src lua :noweb-ref wg-dogen
 -- Close 'Welcome to ...' message
 if #ws.welcome_msg > 0 then

@@ -302,10 +302,10 @@ function exportparamset(file)
    file:close()
 end
 -- exportparams ends here
--- [[[[id:7C1EF619-BC0D-4300-8409-0BDAFCA25535][Script template]]][8BD32E78-AE76-4555-8C17-7CD56CCB776B]]
+-- [[[[id:7C1EF619-BC0D-4300-8409-0BDAFCA25535][Script template]]][wg-start-advanced-worldgen]]
 function start_advanced_worldgen()
    local ws = dfhack.gui.getCurViewscreen()
-   -- [[[[id:7C1EF619-BC0D-4300-8409-0BDAFCA25535][Script template]]][CA2E6D31-5E8B-428D-B6E9-821EC6A02AEB]]
+   -- [[[[id:1D3771B2-9974-4023-9F0E-BDE356229BF8][Generating the world]]][wg-gohome]]
    -- Check we're on the title screen or its subscreens
    while ws and ws.parent and ws._type ~= df.viewscreen_titlest do
       ws = ws.parent
@@ -324,7 +324,7 @@ function start_advanced_worldgen()
       ws = parent
    end
 
-   -- CA2E6D31-5E8B-428D-B6E9-821EC6A02AEB ends here
+   -- wg-gohome ends here
    local titlews = ws --as:df.viewscreen_titlest
 
    titlews.sel_subpage = df.viewscreen_titlest.T_sel_subpage.None
@@ -339,7 +339,40 @@ function start_advanced_worldgen()
    dfhack.timeout(2, 'frames', progress_worldgen)
 end
 
--- 8BD32E78-AE76-4555-8C17-7CD56CCB776B ends here
+-- wg-start-advanced-worldgen ends here
+-- [[[[id:7C1EF619-BC0D-4300-8409-0BDAFCA25535][Script template]]][wg-progress-worldgen]]
+function progress_worldgen()
+   local ws = dfhack.gui.getCurViewscreen() --as:df.viewscreen_new_regionst
+
+   if ws._type ~= df.viewscreen_new_regionst then
+      print('check', ws._type)
+      return
+   end
+
+   -- If finished loading raws
+   if ws.in_worldgen and ws.unk_b8 == 19 then
+      -- [[[[id:7C1EF619-BC0D-4300-8409-0BDAFCA25535][Script template]]][5963F7D7-1999-4114-AA58-2C84E2F6F300]]
+      -- Close 'Welcome to ...' message
+      if #ws.welcome_msg > 0 then
+         gui.simulateInput(ws, 'LEAVESCREEN')
+      end
+      -- 5963F7D7-1999-4114-AA58-2C84E2F6F300 ends here
+      -- [[[[id:7C1EF619-BC0D-4300-8409-0BDAFCA25535][Script template]]][F2B84F75-53E6-4CC9-A7BC-562922043671]]
+      for i,p in pairs(ws.worldgen_presets) do
+         if p.anon_1 == PRESETNAME then
+            ws.cursor_paramset = i
+         end
+      end
+
+      gui.simulateInput(ws, 'SELECT')
+      dfhack.timeout(20, 'frames', check_worldgen_done)
+      return
+
+         -- F2B84F75-53E6-4CC9-A7BC-562922043671 ends here
+   end
+   dfhack.timeout(20, 'frames', progress_worldgen)
+end
+-- wg-progress-worldgen ends here
 -- [[[[id:7C1EF619-BC0D-4300-8409-0BDAFCA25535][Script template]]][C979E8EC-04C7-4EEF-A2C4-671C84F370DD]]
 function check_worldgen_done()
    if df.global.world.worldgen_status.state == 10 then
